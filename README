@@ -1,0 +1,7 @@
+Script usage:
+-edit mysql_simplebackup.php and set valid values for property $default_config (hostname, username and password to connect to MySQL)
+-run the script
+-enter name of the database you want to backup
+-click "Create backup" - it will create database with name {DB_NAME}_backup
+-do whatever you want with backuped database
+-in case of previous step's fail click "Restore backup" button (warning! {DB_NAME}_backup database will be dropped
