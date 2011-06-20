@@ -17,8 +17,15 @@ class Mysql_Simplebackup {
     private $default_config = array(
         'host' => 'localhost',
         'user' => 'root',
-        'password' => '',
+        'password' => 'root',
     );
+    
+    /**
+     * unique postfix of backups created with this tool
+     * 
+     * @var _bu_postfix
+     */
+    protected $_bu_postfix = '__mysqlsimplebu';
     
     /**
      * Singletone object instance
@@ -130,21 +137,73 @@ class Mysql_Simplebackup {
      */
     private function get_bu_name($db)
     {
-        return $db.'_backup';
+        return $db.$this->_bu_postfix;
     }
     
     /**
-     * get databases in MySQL
+     * get backups names
+     * 
+     * @return array
+     */
+    public function get_bu_names()
+    {
+        static $backups = array();
+        
+        if (empty($backups))
+        {
+            $databases = $this->get_databases();
+            foreach ($databases as $db_name)
+            {
+                if (preg_match('#'.$this->_bu_postfix.'$#', $db_name))
+                {
+                    $backups[] = preg_replace('#'.$this->_bu_postfix.'$#', '', $db_name);
+                }
+            }
+        }
+        
+        return $backups;
+    }
+    
+    /**
+     * get names of databases that are not backups
      * 
      * @return array
      */
     public function get_db_names()
     {
-        $databases = array();
-        $query = mysql_query('SHOW DATABASES');
-        while ($row = mysql_fetch_row($query))
+        static $db_names = array();
+        
+        if (empty($db_names))
         {
-            $databases[] = $row[0];
+            $databases = $this->get_databases();
+            foreach ($databases as $db_name)
+            {
+                if ( ! preg_match('#'.$this->_bu_postfix.'$#', $db_name))
+                {
+                    $db_names[] = preg_replace('#'.$this->_bu_postfix.'$#', '', $db_name);
+                }
+            }
+        }
+        
+        return $db_names;
+    }
+    
+    /**
+     * get all database names
+     * 
+     * @return array
+     */
+    private function get_databases()
+    {
+        static $databases = array();
+        
+        if (empty($databases))
+        {
+            $query = mysql_query('SHOW DATABASES');
+            while ($row = mysql_fetch_row($query))
+            {
+                $databases[] = $row[0];
+            }
         }
         
         return $databases;
@@ -187,18 +246,18 @@ class Arr {
 
 if ($_POST)
 {
-    if (isset($_POST['action']) AND isset($_POST['db']) AND ! empty($_POST['db']))
+    if (isset($_POST['action']))
     {
-        if ($_POST['action'] === 'backup')
+        if ($_POST['action'] === 'backup' AND isset($_POST['db']) AND ! empty($_POST['db']))
         {
             Mysql_Simplebackup::factory()
                 ->backup($_POST['db']);
             die('Backup created');
         }
-        elseif ($_POST['action'] === 'restore')
+        elseif ($_POST['action'] === 'restore' AND isset($_POST['bu']) AND ! empty($_POST['bu']))
         {
             Mysql_Simplebackup::factory()
-                ->restore($_POST['db']);
+                ->restore($_POST['bu']);
             die('Database was restored from backup. Backup removed.');
         }
     }
@@ -206,6 +265,7 @@ if ($_POST)
 }
 
 $databases = Mysql_Simplebackup::factory()->get_db_names();
+$backups = Mysql_Simplebackup::factory()->get_bu_names();
 
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -236,7 +296,7 @@ $(document).ready(function(){
         return false;
     });
     $('#restore').click(function(){
-        $.post(url, {action:"restore", db:$('select[name="db"]').val()}, function(response){
+        $.post(url, {action:"restore", bu:$('select[name="bu"]').val()}, function(response){
             $('#response').html(response);
         })
         return false;
@@ -245,15 +305,24 @@ $(document).ready(function(){
 </script>
 
 <form method="POST">
-<p>Database:
-&nbsp;
-<select name="db">
-    <?php foreach ($databases as $db_name) : ?>
-    <option value="<?php echo $db_name; ?>"><?php echo $db_name; ?></option>
-    <?php endforeach; ?>
-</select></p>
 <p>
+    Database:
+    &nbsp;
+    <select name="db">
+        <?php foreach ($databases as $db_name) : ?>
+        <option value="<?php echo $db_name; ?>"><?php echo $db_name; ?></option>
+        <?php endforeach; ?>
+    </select>
     <button id="backup">Create backup</button>
+</p>
+<p>
+    Backup:
+    &nbsp;
+    <select name="bu">
+        <?php foreach ($backups as $db_name) : ?>
+        <option value="<?php echo $db_name; ?>"><?php echo $db_name; ?></option>
+        <?php endforeach; ?>
+    </select>
     <button id="restore">Restore backup</button>
 </p>
 </form>
