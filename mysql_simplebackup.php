@@ -20,6 +20,11 @@ class Mysql_Simplebackup {
         'password' => '',
     );
     
+    /**
+     * Singletone object instance
+     * 
+     * @var MySQL_Simplebackup
+     */
     private static $instance = NULL;
     
     /**
@@ -37,6 +42,9 @@ class Mysql_Simplebackup {
         mysql_connect($host, $user, $password);
     }
     
+    /**
+     * Cloning of the object is forbidden
+     */
     private function __clone() {}
     
     /**
