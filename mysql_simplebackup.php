@@ -287,6 +287,17 @@ $backups = Mysql_Simplebackup::factory()->get_bu_names();
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript">
 
+function array_search (needle, haystack, arg_strict) {
+    var strict = ! ! arg_strict;
+    var key = '';
+    for (key in haystack) {
+        if ((strict && haystack[key] === needle) || ( ! strict && haystack[key] == needle)) {
+            return key;
+        }
+    }
+    return false;
+}
+
 $(document).ready(function(){
     
     var url = window.location.pathname;
@@ -296,7 +307,17 @@ $(document).ready(function(){
     });
     
     $('#backup').click(function(){
-        $.post(url, {action:"backup", db:$('select[name="db"]').val()}, function(response){
+        var db_name = $('select[name="db"]').val();
+        backup_names = new Array;
+        $('#backups').find('option').each(function(){
+            backup_names.push($(this).val());
+        });
+        if (array_search(db_name, backup_names)) {
+            if ( ! window.confirm('Backup of the database "' + db_name + '" already exists\nDo you want to overwrite it?')) {
+                return false;
+            }
+        }
+        $.post(url, {action:"backup", db:db_name}, function(response){
             refresh_backups();
             $('#response').html(response);
         })
