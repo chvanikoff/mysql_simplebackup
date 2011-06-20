@@ -308,7 +308,7 @@ $(document).ready(function(){
     
     $('#backup').click(function(){
         var db_name = $('select[name="db"]').val();
-        backup_names = new Array;
+        var backup_names = new Array;
         $('#backups').find('option').each(function(){
             backup_names.push($(this).val());
         });
