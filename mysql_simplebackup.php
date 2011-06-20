@@ -17,7 +17,7 @@ class Mysql_Simplebackup {
     private $default_config = array(
         'host' => 'localhost',
         'user' => 'root',
-        'password' => '',
+        'password' => 'root',
     );
     
     /**
@@ -63,15 +63,14 @@ class Mysql_Simplebackup {
         while ($row = mysql_fetch_row($result))
         {
             $create_query = mysql_fetch_row(mysql_query('SHOW CREATE TABLE `'.$row[0].'`'));
-            $tables[$row[0]] = $create_query[1];
+            $tables[$row[0]] = preg_replace(
+                '#CREATE TABLE (\`'.$row[0].'\`)#',
+                'CREATE TABLE `'.$to.'`.${1}',
+                $create_query[1]);
         }
         mysql_query('SET FOREIGN_KEY_CHECKS=0');
         foreach ($tables as $table_name => $create_query)
         {
-            $create_query = preg_replace(
-                '#CREATE TABLE (\`'.$table_name.'\`)#',
-                'CREATE TABLE `'.$to.'`.${1}',
-                $create_query);
             mysql_query($create_query);
             mysql_query('INSERT INTO `'.$to.'`.`'.$table_name.'` SELECT * FROM `'.$from.'`.`'.$table_name.'`');
         }
