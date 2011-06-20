@@ -20,13 +20,15 @@ class Mysql_Simplebackup {
         'password' => '',
     );
     
+    private static $instance = NULL;
+    
     /**
      * MySQL connection initialization
      * 
      * @param array $config
      * @return Mysql_Simplebackup
      */
-    public function __construct($config = array())
+    private function __construct($config = array())
     {
         $host = Arr::get($config, 'host', $this->default_config['host']);
         $user = Arr::get($config, 'user', $this->default_config['user']);
@@ -35,15 +37,19 @@ class Mysql_Simplebackup {
         mysql_connect($host, $user, $password);
     }
     
+    private function __clone() {}
+    
     /**
-     * simple factory wrapper
+     * singletone
      * 
      * @param array $config
      * @return Mysql_Simplebackup
      */
-    public function factory($config = array())
+    public static function factory($config = array())
     {
-        return new Mysql_Simplebackup($config);
+        (self::$instance === NULL) AND self::$instance = new Mysql_Simplebackup($config);
+        
+        return self::$instance;
     }
     
     /**
@@ -118,6 +124,23 @@ class Mysql_Simplebackup {
     {
         return $db.'_backup';
     }
+    
+    /**
+     * get databases in MySQL
+     * 
+     * @return array
+     */
+    public function get_db_names()
+    {
+        $databases = array();
+        $query = mysql_query('SHOW DATABASES');
+        while ($row = mysql_fetch_row($query))
+        {
+            $databases[] = $row[0];
+        }
+        
+        return $databases;
+    }
 }
 
 /**
@@ -173,7 +196,9 @@ if ($_POST)
     }
     die();
 }
-    
+
+$databases = Mysql_Simplebackup::factory()->get_db_names();
+
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -197,13 +222,13 @@ $(document).ready(function(){
     });
     
     $('#backup').click(function(){
-        $.post(url, {action:"backup", db:$('input[name="db"]').val()}, function(response){
+        $.post(url, {action:"backup", db:$('select[name="db"]').val()}, function(response){
             $('#response').html(response);
         })
         return false;
     });
     $('#restore').click(function(){
-        $.post(url, {action:"restore", db:$('input[name="db"]').val()}, function(response){
+        $.post(url, {action:"restore", db:$('select[name="db"]').val()}, function(response){
             $('#response').html(response);
         })
         return false;
@@ -212,7 +237,13 @@ $(document).ready(function(){
 </script>
 
 <form method="POST">
-<p>Database: <input name="db" /></p>
+<p>Database:
+&nbsp;
+<select name="db">
+    <?php foreach ($databases as $db_name) : ?>
+    <option value="<?php echo $db_name; ?>"><?php echo $db_name; ?></option>
+    <?php endforeach; ?>
+</select></p>
 <p>
     <button id="backup">Create backup</button>
     <button id="restore">Restore backup</button>
