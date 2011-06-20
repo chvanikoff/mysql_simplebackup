@@ -252,13 +252,17 @@ if ($_POST)
         {
             Mysql_Simplebackup::factory()
                 ->backup($_POST['db']);
-            die('Backup created');
+            echo 'Backup created';
         }
         elseif ($_POST['action'] === 'restore' AND isset($_POST['bu']) AND ! empty($_POST['bu']))
         {
             Mysql_Simplebackup::factory()
                 ->restore($_POST['bu']);
-            die('Database was restored from backup. Backup removed.');
+            echo 'Database was restored from backup. Backup removed.';
+        }
+        elseif ($_POST['action'] === 'get_names')
+        {
+            echo json_encode(Mysql_Simplebackup::factory()->get_bu_names());
         }
     }
     die();
@@ -282,7 +286,9 @@ $backups = Mysql_Simplebackup::factory()->get_bu_names();
 
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript">
+
 $(document).ready(function(){
+    
     var url = window.location.pathname;
     
     $("#response").ajaxStart(function(){
@@ -291,16 +297,28 @@ $(document).ready(function(){
     
     $('#backup').click(function(){
         $.post(url, {action:"backup", db:$('select[name="db"]').val()}, function(response){
+            refresh_backups();
             $('#response').html(response);
         })
         return false;
     });
     $('#restore').click(function(){
         $.post(url, {action:"restore", bu:$('select[name="bu"]').val()}, function(response){
+            refresh_backups();
             $('#response').html(response);
         })
         return false;
     });
+    
+    function refresh_backups() {
+        $.post(url, {action:'get_names'}, function(db_names){
+            var options = '';
+            for (key in db_names) {
+                options += '<option value="' + db_names[key] + '">' + db_names[key] + '</option>';
+            }
+    		$("#backups").html(options);
+        }, "json");
+    }
 });
 </script>
 
@@ -318,7 +336,7 @@ $(document).ready(function(){
 <p>
     Backup:
     &nbsp;
-    <select name="bu">
+    <select name="bu" id="backups">
         <?php foreach ($backups as $db_name) : ?>
         <option value="<?php echo $db_name; ?>"><?php echo $db_name; ?></option>
         <?php endforeach; ?>
@@ -327,6 +345,5 @@ $(document).ready(function(){
 </p>
 </form>
 <div id="response"></div>
-
 </body>
 </html>
