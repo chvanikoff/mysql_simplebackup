@@ -17,7 +17,7 @@ class Mysql_Simplebackup {
     private $default_config = array(
         'host' => 'localhost',
         'user' => 'root',
-        'password' => 'root',
+        'password' => '',
     );
     
     /**
