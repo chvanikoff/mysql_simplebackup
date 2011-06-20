@@ -130,6 +130,20 @@ class Mysql_Simplebackup {
     }
     
     /**
+     * drop all backups
+     * 
+     * @return void
+     */
+    public function drop_backups()
+    {
+        $backups = $this->get_bu_names();
+        foreach ($backups as $db_name)
+        {
+            mysql_query('DROP DATABASE `'.$db_name.$this->_bu_postfix.'`');
+        }
+    }
+    
+    /**
      * get template name for backup
      * 
      * @param string
@@ -248,21 +262,44 @@ if ($_POST)
 {
     if (isset($_POST['action']))
     {
-        if ($_POST['action'] === 'backup' AND isset($_POST['db']) AND ! empty($_POST['db']))
+        switch ($_POST['action'])
         {
-            Mysql_Simplebackup::factory()
-                ->backup($_POST['db']);
-            echo 'Backup created';
-        }
-        elseif ($_POST['action'] === 'restore' AND isset($_POST['bu']) AND ! empty($_POST['bu']))
-        {
-            Mysql_Simplebackup::factory()
-                ->restore($_POST['bu']);
-            echo 'Database was restored from backup. Backup removed.';
-        }
-        elseif ($_POST['action'] === 'get_names')
-        {
-            echo json_encode(Mysql_Simplebackup::factory()->get_bu_names());
+            case 'backup' :
+                if (isset($_POST['db']) AND ! empty($_POST['db']))
+                {
+                    Mysql_Simplebackup::factory()
+                        ->backup($_POST['db']);
+                    echo 'Backup created';
+                }
+                else
+                {
+                    echo 'select a database to backup';
+                }
+                break;
+            
+            case 'restore' :
+                if (isset($_POST['bu']) AND ! empty($_POST['bu']))
+                {
+                    Mysql_Simplebackup::factory()
+                        ->restore($_POST['bu']);
+                    echo 'Database was restored from backup. Backup removed.';
+                }
+                else
+                {
+                    echo 'select a backup to restore from';
+                }
+                break;
+            
+            case 'get_names' :
+                echo json_encode(Mysql_Simplebackup::factory()->get_bu_names());
+                break;
+            
+            case 'drop_backups' :
+                Mysql_Simplebackup::factory()->drop_backups();
+                echo 'all backups dropped';
+                break;
+            
+            default :
         }
     }
     die();
@@ -330,6 +367,15 @@ $(document).ready(function(){
         })
         return false;
     });
+    $('#drop_backups').click(function(){
+        if (window.confirm('are you sure you want to drop ALL backups from MySQL?')) {
+            $.post(url, {action:'drop_backups'}, function(response){
+                refresh_backups();
+                $('#response').html(response);
+            });
+        }
+        return false;
+    });
     
     function refresh_backups() {
         $.post(url, {action:'get_names'}, function(db_names){
@@ -363,6 +409,9 @@ $(document).ready(function(){
         <?php endforeach; ?>
     </select>
     <button id="restore">Restore backup</button>
+</p>
+<p>
+    <button style="background-color: #c00; color:#fff;" id="drop_backups">drop all backups</button>
 </p>
 </form>
 <div id="response"></div>
